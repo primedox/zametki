@@ -1,4 +1,5 @@
 import copy
+import os
 import time
 from datetime import date, datetime
 
@@ -10,12 +11,16 @@ from kivy.core.window import Window
 from kivy.metrics import dp
 from kivy.properties import (BooleanProperty, ColorProperty, NumericProperty,
                              ObjectProperty, StringProperty)
+from kivy.graphics import Color, Rectangle
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.image import Image
+from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen
 
 from core import APP_VERSION, dates, theme
 from core.store import note_as_text, note_is_empty
 from . import sheets
+from .helpers import BASE
 from .widgets import Chip, ColorDot, DayTab, LessonCard, NoteCard, Toast  # noqa: F401  (NoteCard: RecycleView viewclass)
 
 
@@ -23,7 +28,51 @@ def _app():
     return App.get_running_app()
 
 
+class Splash(FloatLayout):
+    """Short animated start screen drawn over the app while it settles."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        app = _app()
+        with self.canvas.before:
+            Color(*app.bg)
+            self._rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self._sync, size=self._sync)
+        self.logo = Image(source=os.path.join(BASE, "assets", "icon.png"),
+                          size_hint=(None, None), size=(dp(70), dp(70)),
+                          pos_hint={"center_x": .5, "center_y": .56}, opacity=0)
+        self.name = Label(text="Заметки", bold=True, font_size="24sp", color=app.fg,
+                          size_hint=(None, None), size=(dp(220), dp(40)),
+                          pos_hint={"center_x": .5, "center_y": .44}, opacity=0)
+        self.add_widget(self.logo)
+        self.add_widget(self.name)
+        Animation(opacity=1, size=(dp(104), dp(104)), duration=.5, t="out_back").start(self.logo)
+        (Animation(duration=.2) + Animation(opacity=1, duration=.4)).start(self.name)
+        Clock.schedule_once(self._leave, 1.2)
+
+    def _sync(self, *_):
+        self._rect.pos = self.pos
+        self._rect.size = self.size
+
+    def _leave(self, _dt):
+        anim = Animation(opacity=0, duration=.3)
+        anim.bind(on_complete=lambda *_: self.parent and self.parent.remove_widget(self))
+        anim.start(self)
+
+    def on_touch_down(self, touch):
+        return True
+
+    def on_touch_move(self, touch):
+        return True
+
+    def on_touch_up(self, touch):
+        return True
+
+
 class Root(FloatLayout):
+    def show_splash(self):
+        self.add_widget(Splash())
+
     def toast(self, text):
         bubble = Toast(text=text)
         self.add_widget(bubble)
