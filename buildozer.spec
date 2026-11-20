@@ -5,7 +5,7 @@ package.domain = app.zametki
 source.dir = .
 source.include_exts = py,kv,png
 source.exclude_dirs = tests,tools,.github,bin,.buildozer,__pycache__
-version = 1.0.0
+version = 1.0.3
 requirements = python3,kivy==2.3.0
 orientation = portrait
 fullscreen = 0

@@ -25,6 +25,16 @@ def _fit_metrics():
 _fit_metrics()
 
 try:
+    from kivy.config import Config
+
+    Config.set("input", "mouse", "mouse,disable_multitouch")
+    from kivy.core.window import Window
+
+    Window.clearcolor = (0.957, 0.965, 0.984, 1)
+except Exception:
+    pass
+
+try:
     import notes_app
 
     notes_app.NotesApp().run()

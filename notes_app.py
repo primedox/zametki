@@ -1,21 +1,19 @@
 import copy
 import os
 
-from kivy.config import Config
-
-Config.set("input", "mouse", "mouse,disable_multitouch")
-
 from kivy.app import App  # noqa: E402
 from kivy.clock import Clock  # noqa: E402
+from kivy.graphics import Color, Rectangle  # noqa: E402
 from kivy.core.clipboard import Clipboard  # noqa: E402
 from kivy.core.window import Window  # noqa: E402
 from kivy.lang import Builder  # noqa: E402
 from kivy.properties import BooleanProperty, ColorProperty, StringProperty  # noqa: E402
+from kivy.uix.floatlayout import FloatLayout  # noqa: E402
 from kivy.utils import platform  # noqa: E402
 
 from core import dates, theme  # noqa: E402
 from core.store import Store, display_title, note_as_text, preview_text  # noqa: E402
-from ui import screens, sheets, widgets  # noqa: E402,F401
+from ui import insets, screens, sheets, widgets  # noqa: E402,F401
 from ui.helpers import BASE  # noqa: E402
 
 if platform not in ("android", "ios"):
@@ -24,6 +22,8 @@ if platform not in ("android", "ios"):
 
 class NotesApp(App):
     tab = StringProperty("notes")
+    kb_open = BooleanProperty(False)
+    inset_info = StringProperty("")
     dark = BooleanProperty(False)
     bg = ColorProperty([1, 1, 1, 1])
     surface = ColorProperty([1, 1, 1, 1])
@@ -35,10 +35,25 @@ class NotesApp(App):
     accent_soft = ColorProperty([.9, .92, 1, 1])
     danger = ColorProperty([.9, .3, .3, 1])
 
+    booted = False
+
     def build(self):
         self.title = "Заметки"
         self.icon = os.path.join(BASE, "assets", "icon.png")
+        Window.clearcolor = screens.Splash.BG
         Window.softinput_mode = "resize"
+        self.shell = FloatLayout()
+        with self.shell.canvas.before:
+            self._shell_color = Color(*screens.Splash.BG)
+            self._shell_rect = Rectangle(pos=self.shell.pos, size=self.shell.size)
+        self.shell.bind(pos=self._shell_sync, size=self._shell_sync)
+        self.splash = screens.Splash()
+        self.shell.add_widget(self.splash)
+        # let the splash animation start, then build the real UI underneath it
+        Clock.schedule_once(self._boot, 0.55)
+        return self.shell
+
+    def _boot(self, _dt):
         self.store = Store(os.path.join(self.user_data_dir, "data.json"))
         self.apply_theme(self.store.prefs.get("theme", "light"))
 
@@ -61,19 +76,60 @@ class NotesApp(App):
         self.schedule_screen = main.ids.schedule
         self.more_screen = main.ids.more
 
-        Window.bind(on_keyboard=self._on_key)
-        root.show_splash()
-        return root
+        self._max_height = Window.height
+        self._kb_trigger = Clock.create_trigger(self._apply_keyboard, 0.12)
+        Window.bind(on_keyboard=self._on_key, height=self._on_height)
+
+        # keep clear of the status bar / camera cut-out if the surface is drawn under them
+        self._pad_top, self._pad_bottom, note = ((0, 0, "desktop") if platform != "android"
+                                                 else insets.measure())
+        self.inset_info = "Отступы: %d/%d px  ·  %s" % (self._pad_top, self._pad_bottom, note)
+        root.size_hint = (1, None)
+        self.shell.add_widget(root, index=1)  # under the splash
+        Window.bind(height=self._place_root)
+        self.bind(kb_open=self._place_root, bg=self._tint_shell)
+        self._tint_shell()
+        self._place_root()
+        self.booted = True
+        Clock.schedule_once(self.splash.finish, 0.1)
+
+    # ---- layout ---------------------------------------------------------
+    def _shell_sync(self, *_):
+        self._shell_rect.pos = self.shell.pos
+        self._shell_rect.size = self.shell.size
+
+    def _tint_shell(self, *_):
+        self._shell_color.rgba = self.bg
+
+    def _place_root(self, *_):
+        bottom = 0 if self.kb_open else self._pad_bottom
+        self.ui.x = 0
+        self.ui.y = bottom
+        self.ui.width = Window.width
+        self.ui.height = max(Window.height - self._pad_top - bottom, 100)
+
+    # ---- keyboard -------------------------------------------------------
+    def _on_height(self, _window, height):
+        # the window shrinks when the soft keyboard opens; debounce the animation
+        self._max_height = max(self._max_height, height)
+        self._kb_trigger.cancel()
+        self._kb_trigger()
+
+    def _apply_keyboard(self, _dt):
+        self.kb_open = Window.height < self._max_height * 0.8
 
     def on_start(self):
-        self.style_bars()
+        if self.booted:
+            self.style_bars()
 
     def on_pause(self):
-        self.editor.flush()
+        if self.booted:
+            self.editor.flush()
         return True
 
     def on_stop(self):
-        self.editor.flush()
+        if self.booted:
+            self.editor.flush()
 
     # ---- theme ----------------------------------------------------------
     def apply_theme(self, name):
@@ -149,7 +205,7 @@ class NotesApp(App):
             self.refresh_all()
 
     def _on_key(self, _window, key, *_args):
-        if key != 27:
+        if key != 27 or not self.booted:
             return False
         if self.sm.current == "editor":
             self.editor.close()
@@ -157,8 +213,7 @@ class NotesApp(App):
         if self.sm.current == "lesson":
             self.show_main()
             return True
-        if self.notes_screen.searching and self.tab == "notes":
-            self.notes_screen.toggle_search()
+        if self.tab == "notes" and self.notes_screen.clear_search():
             return True
         if self.tab != "notes":
             self.open_tab("notes")
