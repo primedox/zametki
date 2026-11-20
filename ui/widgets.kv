@@ -1,0 +1,567 @@
+#:import ipath ui.helpers.ipath
+#:import alpha ui.helpers.alpha
+
+<Label>:
+    color: app.fg
+
+<TextInput>:
+    background_normal: ''
+    background_active: ''
+    background_color: 0, 0, 0, 0
+    foreground_color: app.fg
+    hint_text_color: alpha(app.sub, .8)
+    cursor_color: app.accent
+    selection_color: alpha(app.accent, .3)
+    cursor_width: dp(2)
+    write_tab: False
+    font_size: '16sp'
+
+<Screen>:
+    canvas.before:
+        Color:
+            rgba: app.bg
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+<Txt@Label>:
+    halign: 'left'
+    valign: 'middle'
+    text_size: self.width, None
+    size_hint_y: None
+    height: self.texture_size[1]
+
+<Section@Label>:
+    halign: 'left'
+    valign: 'middle'
+    text_size: self.width, None
+    size_hint_y: None
+    height: dp(32)
+    font_size: '13sp'
+    bold: True
+    color: app.sub
+
+<Pad@BoxLayout>:
+    orientation: 'vertical'
+    size_hint_y: None
+    height: self.minimum_height
+
+<Header@BoxLayout>:
+    size_hint_y: None
+    height: dp(64)
+    padding: dp(22), dp(8), dp(8), dp(8)
+
+<Title@Label>:
+    text_size: self.size
+    halign: 'left'
+    valign: 'middle'
+    bold: True
+    font_size: '28sp'
+
+<Card>:
+    canvas.before:
+        Color:
+            rgba: self.bg
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [self.radius]
+
+<IconBtn>:
+    size_hint: None, None
+    size: dp(44), dp(44)
+    pos_hint: {'center_y': .5}
+    opacity: .55 if self.state == 'down' else 1
+    Image:
+        source: ipath(root.icon)
+        color: root.tint or app.fg
+        size_hint: None, None
+        size: root.isize, root.isize
+        pos_hint: {'center_x': .5, 'center_y': .5}
+        fit_mode: 'contain'
+        mipmap: True
+
+<PillBtn>:
+    size_hint_y: None
+    height: dp(50)
+    bold: True
+    font_size: '15sp'
+    color: root.fg or (app.accent if root.soft else (1, 1, 1, 1))
+    opacity: .8 if self.state == 'down' else 1
+    canvas.before:
+        Color:
+            rgba: root.bg or (app.accent_soft if root.soft else app.accent)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [self.height / 2]
+
+<Chip>:
+    size_hint: None, None
+    height: dp(38)
+    width: self.texture_size[0] + dp(32)
+    pos_hint: {'center_y': .5}
+    font_size: '14sp'
+    bold: True
+    color: (1, 1, 1, 1) if self.active else (self.tone or app.accent)
+    opacity: .8 if self.state == 'down' else 1
+    canvas.before:
+        Color:
+            rgba: (self.tone or app.accent) if self.active else alpha(self.tone or app.accent, .15)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [self.height / 2]
+
+<DayTab>:
+    orientation: 'vertical'
+    size_hint_y: None
+    height: dp(58)
+    padding: 0, dp(8), 0, dp(6)
+    opacity: .85 if self.state == 'down' else 1
+    canvas.before:
+        Color:
+            rgba: app.accent if self.active else app.chip
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(17)]
+    Label:
+        text: root.text
+        bold: True
+        font_size: '15sp'
+        color: (1, 1, 1, 1) if root.active else (app.accent if root.today else app.fg)
+    Label:
+        text: root.sub
+        font_size: '11sp'
+        color: (1, 1, 1, .85) if root.active else app.sub
+
+<Fab>:
+    size_hint: None, None
+    size: dp(60), dp(60)
+    opacity: .85 if self.state == 'down' else 1
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, .12
+        Ellipse:
+            pos: self.x - dp(3), self.y - dp(5)
+            size: self.width + dp(6), self.height + dp(6)
+        Color:
+            rgba: app.accent
+        Ellipse:
+            pos: self.pos
+            size: self.size
+    Image:
+        source: ipath(root.icon)
+        color: 1, 1, 1, 1
+        size_hint: None, None
+        size: dp(26), dp(26)
+        pos_hint: {'center_x': .5, 'center_y': .5}
+        fit_mode: 'contain'
+        mipmap: True
+
+<NavItem>:
+    orientation: 'vertical'
+    padding: 0, dp(8), 0, dp(6)
+    spacing: dp(3)
+    canvas.before:
+        Color:
+            rgba: app.accent_soft if self.active else (0, 0, 0, 0)
+        RoundedRectangle:
+            pos: self.center_x - dp(28), self.top - dp(38)
+            size: dp(56), dp(30)
+            radius: [dp(15)]
+    Image:
+        source: ipath(root.icon)
+        color: app.accent if root.active else app.sub
+        size_hint_y: None
+        height: dp(24)
+        fit_mode: 'contain'
+        mipmap: True
+    Label:
+        text: root.text
+        font_size: '11sp'
+        bold: root.active
+        color: app.accent if root.active else app.sub
+        size_hint_y: None
+        height: dp(14)
+
+<NavBar@BoxLayout>:
+    size_hint_y: None
+    height: dp(68)
+    canvas.before:
+        Color:
+            rgba: app.surface
+        Rectangle:
+            pos: self.pos
+            size: self.size
+        Color:
+            rgba: app.line_c
+        Rectangle:
+            pos: self.x, self.top - dp(1)
+            size: self.width, dp(1)
+
+<ColorDot>:
+    size_hint: None, None
+    size: dp(34), dp(34)
+    pos_hint: {'center_y': .5}
+    canvas.before:
+        Color:
+            rgba: app.accent if self.active else app.line_c
+        Ellipse:
+            pos: self.pos
+            size: self.size
+        Color:
+            rgba: self.fill
+        Ellipse:
+            pos: self.x + dp(4), self.y + dp(4)
+            size: self.width - dp(8), self.height - dp(8)
+
+<Dot>:
+    size_hint: None, None
+    size: dp(8), dp(8)
+    pos_hint: {'center_y': .5}
+    canvas.before:
+        Color:
+            rgba: self.tone
+        Ellipse:
+            pos: self.pos
+            size: self.size
+
+<Field>:
+    size_hint_y: None
+    height: dp(52)
+    padding: dp(16), 0
+    bg: app.chip
+    radius: dp(14)
+    TextInput:
+        id: ti
+        text: root.text
+        hint_text: root.hint
+        multiline: False
+        input_filter: root.filt
+        padding: 0, max((self.height - self.line_height) / 2, 0)
+        on_text: root.text = self.text
+
+<Toast>:
+    size_hint: None, None
+    size: lbl.width + dp(36), dp(44)
+    padding: dp(18), 0
+    pos_hint: {'center_x': .5}
+    y: dp(92)
+    bg: .09, .1, .15, .96
+    radius: dp(22)
+    opacity: 0
+    Label:
+        id: lbl
+        text: root.text
+        color: 1, 1, 1, 1
+        font_size: '14sp'
+        size_hint: None, None
+        size: self.texture_size
+        pos_hint: {'center_y': .5}
+
+<SheetBody>:
+    orientation: 'vertical'
+    size_hint: 1, None
+    height: self.minimum_height
+    padding: 0, dp(26), 0, dp(24)
+    canvas.before:
+        Color:
+            rgba: app.surface
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(26), dp(26), 0, 0]
+        Color:
+            rgba: app.line_c
+        RoundedRectangle:
+            pos: self.center_x - dp(20), self.top - dp(14)
+            size: dp(40), dp(4)
+            radius: [dp(2)]
+
+<SheetRow>:
+    size_hint_y: None
+    height: dp(52)
+    padding: dp(24), 0, dp(24), 0
+    spacing: dp(16)
+    opacity: .6 if self.state == 'down' else 1
+    Image:
+        source: ipath(root.icon)
+        color: root.tint or (app.danger if root.danger else app.fg)
+        size_hint: None, None
+        size: (dp(22), dp(22)) if root.icon else (0, 0)
+        pos_hint: {'center_y': .5}
+        fit_mode: 'contain'
+        mipmap: True
+    Txt:
+        text: root.text
+        font_size: '16sp'
+        color: app.danger if root.danger else app.fg
+        pos_hint: {'center_y': .5}
+    Image:
+        source: ipath('check')
+        color: app.accent
+        size_hint: None, None
+        size: dp(20), dp(20)
+        pos_hint: {'center_y': .5}
+        opacity: 1 if root.selected else 0
+        fit_mode: 'contain'
+        mipmap: True
+
+<Tile>:
+    orientation: 'vertical'
+    padding: dp(12)
+    spacing: dp(8)
+    opacity: .8 if self.state == 'down' else 1
+    canvas.before:
+        Color:
+            rgba: app.chip
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(20)]
+    Widget:
+    Image:
+        source: ipath(root.icon)
+        color: app.accent
+        size_hint_y: None
+        height: dp(36)
+        fit_mode: 'contain'
+        mipmap: True
+    Label:
+        text: root.text
+        bold: True
+        font_size: '15sp'
+        size_hint_y: None
+        height: dp(22)
+    Widget:
+
+<NoteCard>:
+    orientation: 'vertical'
+    size_hint_y: None
+    height: dp(120)
+    padding: dp(32), dp(14), dp(16), dp(12)
+    spacing: dp(4)
+    radius: dp(20)
+    opacity: .85 if self.state == 'down' else 1
+    canvas.before:
+        Color:
+            rgba: self.strip
+        RoundedRectangle:
+            pos: self.x + dp(14), self.y + dp(18)
+            size: dp(4), self.height - dp(36)
+            radius: [dp(2)]
+    BoxLayout:
+        size_hint_y: None
+        height: dp(24)
+        spacing: dp(8)
+        Txt:
+            text: root.title
+            bold: True
+            font_size: '16sp'
+            shorten: True
+            shorten_from: 'right'
+            pos_hint: {'center_y': .5}
+        Image:
+            source: ipath('pin')
+            color: app.accent
+            size_hint: None, None
+            size: dp(16), dp(16)
+            pos_hint: {'center_y': .5}
+            opacity: 1 if root.pinned else 0
+            fit_mode: 'contain'
+            mipmap: True
+    Txt:
+        text: root.preview
+        font_size: '13sp'
+        color: app.sub
+        max_lines: 2
+    Widget:
+    BoxLayout:
+        size_hint_y: None
+        height: dp(18)
+        spacing: dp(6)
+        Dot:
+            tone: root.folder_color
+        Txt:
+            text: root.folder_name + '   ·   ' + root.stamp
+            font_size: '12sp'
+            color: app.sub
+            shorten: True
+            pos_hint: {'center_y': .5}
+        Image:
+            source: ipath('calendar')
+            color: app.sub
+            size_hint: None, None
+            size: dp(14), dp(14)
+            pos_hint: {'center_y': .5}
+            opacity: 1 if root.date_text else 0
+            fit_mode: 'contain'
+            mipmap: True
+        Label:
+            text: root.date_text
+            font_size: '12sp'
+            color: app.sub
+            size_hint_x: None
+            width: self.texture_size[0]
+
+<LessonCard>:
+    size_hint_y: None
+    height: dp(80)
+    padding: dp(16), dp(10), dp(16), dp(10)
+    spacing: dp(12)
+    radius: dp(20)
+    opacity: .85 if self.state == 'down' else 1
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint_x: None
+        width: dp(46)
+        Label:
+            text: root.time_start
+            bold: True
+            font_size: '15sp'
+        Label:
+            text: root.time_end
+            font_size: '12sp'
+            color: app.sub
+    Widget:
+        size_hint: None, None
+        width: dp(4)
+        height: dp(52)
+        pos_hint: {'center_y': .5}
+        canvas:
+            Color:
+                rgba: root.strip
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [dp(2)]
+    BoxLayout:
+        orientation: 'vertical'
+        spacing: dp(2)
+        Widget:
+        Txt:
+            text: root.subject
+            bold: True
+            font_size: '16sp'
+            shorten: True
+        Txt:
+            text: root.meta
+            font_size: '13sp'
+            color: app.sub
+            shorten: True
+        Widget:
+
+<ListRow>:
+    size_hint_y: None
+    height: dp(50)
+    padding: dp(8), 0, dp(4), 0
+    IconBtn:
+        icon: 'box_on' if root.done else 'box'
+        tint: app.accent if root.done else app.sub
+        on_release: root.toggle()
+    TextInput:
+        id: ti
+        text: root.text
+        hint_text: 'Пункт'
+        multiline: False
+        font_size: '17sp'
+        foreground_color: app.sub if root.done else app.fg
+        text_validate_unfocus: False
+        padding: dp(6), max((self.height - self.line_height) / 2, 0)
+        on_text: root.text = self.text
+        on_text_validate: root.dispatch('on_enter')
+    IconBtn:
+        icon: 'close'
+        isize: dp(18)
+        tint: app.sub
+        on_release: root.dispatch('on_remove')
+
+<ListEditor>:
+    bar_width: 0
+    do_scroll_x: False
+    BoxLayout:
+        id: box
+        orientation: 'vertical'
+        size_hint_y: None
+        height: self.minimum_height
+        padding: dp(8), dp(4), dp(8), dp(120)
+
+<DayCell>:
+    canvas.before:
+        Color:
+            rgba: app.accent if self.selected else (app.accent_soft if self.today else (0, 0, 0, 0))
+        Ellipse:
+            pos: self.center_x - dp(19), self.center_y - dp(19)
+            size: dp(38), dp(38)
+        Color:
+            rgba: app.accent if (self.marked and not self.selected) else (0, 0, 0, 0)
+        Ellipse:
+            pos: self.center_x - dp(2), self.center_y - dp(18)
+            size: dp(4), dp(4)
+    Label:
+        text: root.label
+        font_size: '15sp'
+        bold: root.selected or root.today
+        color: (1, 1, 1, 1) if root.selected else (alpha(app.sub, .45) if root.other else app.fg)
+        size_hint: None, None
+        size: root.size
+        pos_hint: {'center_x': .5, 'center_y': .5}
+
+<MonthGrid>:
+    orientation: 'vertical'
+    size_hint_y: None
+    height: dp(346)
+    BoxLayout:
+        size_hint_y: None
+        height: dp(56)
+        padding: dp(8), dp(6)
+        IconBtn:
+            icon: 'chevron_left'
+            on_release: root.shift(-1)
+        Label:
+            id: title
+            bold: True
+            font_size: '17sp'
+        IconBtn:
+            icon: 'chevron_right'
+            on_release: root.shift(1)
+    GridLayout:
+        cols: 7
+        size_hint_y: None
+        height: dp(26)
+        padding: dp(6), 0
+        Label:
+            text: 'Пн'
+            font_size: '12sp'
+            color: app.sub
+        Label:
+            text: 'Вт'
+            font_size: '12sp'
+            color: app.sub
+        Label:
+            text: 'Ср'
+            font_size: '12sp'
+            color: app.sub
+        Label:
+            text: 'Чт'
+            font_size: '12sp'
+            color: app.sub
+        Label:
+            text: 'Пт'
+            font_size: '12sp'
+            color: app.sub
+        Label:
+            text: 'Сб'
+            font_size: '12sp'
+            color: app.sub
+        Label:
+            text: 'Вс'
+            font_size: '12sp'
+            color: app.sub
+    GridLayout:
+        id: grid
+        cols: 7
+        rows: 6
+        padding: dp(6), 0, dp(6), dp(6)
