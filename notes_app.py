@@ -62,6 +62,7 @@ class NotesApp(App):
         self.more_screen = main.ids.more
 
         Window.bind(on_keyboard=self._on_key)
+        root.show_splash()
         return root
 
     def on_start(self):
