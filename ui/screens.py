@@ -17,7 +17,8 @@ from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen
 
-from core import APP_VERSION, dates, theme
+from core import APP_VERSION, CHANGES, dates, theme
+from core.build_info import BUILD, SHA
 from core.store import note_as_text, note_is_empty
 from . import sheets
 from .helpers import BASE
@@ -29,32 +30,47 @@ def _app():
 
 
 class Splash(FloatLayout):
-    """Short animated start screen drawn over the app while it settles."""
+    """Start screen shown the instant the Kivy window exists.
+
+    It is drawn with plain Python (no .kv, no theme) so it can appear before the
+    rest of the app is built, and it continues the native presplash seamlessly:
+    same background, same logo size and position.
+    """
+
+    BG = (0.957, 0.965, 0.984, 1)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        app = _app()
         with self.canvas.before:
-            Color(*app.bg)
+            Color(*self.BG)
             self._rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._sync, size=self._sync)
         self.logo = Image(source=os.path.join(BASE, "assets", "icon.png"),
-                          size_hint=(None, None), size=(dp(70), dp(70)),
-                          pos_hint={"center_x": .5, "center_y": .56}, opacity=0)
-        self.name = Label(text="Заметки", bold=True, font_size="24sp", color=app.fg,
+                          size_hint=(None, None), size=(dp(67), dp(67)),
+                          pos_hint={"center_x": .5, "center_y": .5})
+        self.name = Label(text="Заметки", bold=True, font_size="24sp",
+                          color=(0.086, 0.102, 0.169, 1),
                           size_hint=(None, None), size=(dp(220), dp(40)),
-                          pos_hint={"center_x": .5, "center_y": .44}, opacity=0)
+                          pos_hint={"center_x": .5, "center_y": .36}, opacity=0)
+        self.ver = Label(text="v%s  ·  #%s" % (APP_VERSION, BUILD), font_size="12sp", color=(0.48, 0.51, 0.59, 1),
+                         size_hint=(None, None), size=(dp(120), dp(24)),
+                         pos_hint={"center_x": .5, "y": .04})
         self.add_widget(self.logo)
         self.add_widget(self.name)
-        Animation(opacity=1, size=(dp(104), dp(104)), duration=.5, t="out_back").start(self.logo)
-        (Animation(duration=.2) + Animation(opacity=1, duration=.4)).start(self.name)
-        Clock.schedule_once(self._leave, 1.2)
+        self.add_widget(self.ver)
+        self._fading = False
+        Animation(size=(dp(96), dp(96)), duration=.55, t="out_cubic").start(self.logo)
+        (Animation(duration=.25) + Animation(opacity=1, duration=.35)).start(self.name)
 
     def _sync(self, *_):
         self._rect.pos = self.pos
         self._rect.size = self.size
 
-    def _leave(self, _dt):
+    def finish(self, *_):
+        """Fade away once the real UI is ready underneath."""
+        if self._fading:
+            return
+        self._fading = True
         anim = Animation(opacity=0, duration=.3)
         anim.bind(on_complete=lambda *_: self.parent and self.parent.remove_widget(self))
         anim.start(self)
@@ -70,9 +86,6 @@ class Splash(FloatLayout):
 
 
 class Root(FloatLayout):
-    def show_splash(self):
-        self.add_widget(Splash())
-
     def toast(self, text):
         bubble = Toast(text=text)
         self.add_widget(bubble)
@@ -87,7 +100,6 @@ class MainScreen(Screen):
 
 
 class NotesScreen(Screen):
-    searching = BooleanProperty(False)
     folder = NumericProperty(-1)
     query = StringProperty("")
     empty_title = StringProperty("")
@@ -95,6 +107,7 @@ class NotesScreen(Screen):
 
     def on_kv_post(self, base_widget):
         super().on_kv_post(base_widget)
+        self._query_trigger = Clock.create_trigger(lambda _dt: self.refresh(), 0.25)
         self._chips = []
         specs = [("Все", None, -1)] + [(n, theme.rgba(c), i) for i, (n, c) in enumerate(theme.FOLDERS)]
         for name, tone, index in specs:
@@ -108,19 +121,20 @@ class NotesScreen(Screen):
         self.folder = -1 if index == self.folder else index
         self.refresh()
 
-    def toggle_search(self):
-        self.searching = not self.searching
-        if self.searching:
-            Clock.schedule_once(lambda _dt: self.ids.search.focus(), 0.05)
-        else:
-            self.ids.search.text = ""
-            self.query = ""
-            Window.release_all_keyboards()
-            self.refresh()
+    def clear_search(self):
+        """Back-button helper: returns True if there was something to clear."""
+        field = self.ids.search.ids.ti
+        if not field.focus and not field.text:
+            return False
+        field.focus = False
+        field.text = ""
+        Window.release_all_keyboards()
+        return True
 
     def on_query(self, text):
         self.query = text
-        self.refresh()
+        self._query_trigger.cancel()
+        self._query_trigger()
 
     def open_sort(self):
         app = _app()
@@ -255,7 +269,8 @@ class ScheduleScreen(Screen):
 
 class MoreScreen(Screen):
     stats = StringProperty("")
-    version = StringProperty(APP_VERSION)
+    version = StringProperty("%s  ·  сборка #%s (%s)" % (APP_VERSION, BUILD, SHA))
+    changes = StringProperty("\n".join(CHANGES))
 
     def on_kv_post(self, base_widget):
         super().on_kv_post(base_widget)
@@ -346,11 +361,26 @@ class EditorScreen(Screen):
             self._trigger.cancel()
             self._commit()
 
-    def close(self):
-        self.flush()
-        self.note = None
+    def hide_keyboard(self):
+        for field in (self.ids.title, self.ids.body):
+            field.focus = False
+        for row in self.ids.todo.ids.box.children:
+            ids = getattr(row, "ids", None)
+            if ids is not None and "ti" in ids:
+                ids.ti.focus = False
         Window.release_all_keyboards()
+
+    def close(self, toast=False):
+        self.hide_keyboard()
+        self.flush()
+        saved = self.saved
+        self.note = None
         _app().show_main()
+        if toast and saved:
+            _app().toast("Сохранено")
+
+    def done(self):
+        self.close(toast=True)
 
     # -- state -------------------------------------------------------------
     def _sync(self):

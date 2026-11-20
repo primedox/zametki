@@ -15,9 +15,6 @@
     cursor_width: dp(2)
     write_tab: False
     font_size: '16sp'
-    keyboard_suggestions: False
-    use_bubble: True
-    use_handles: True
 
 <Screen>:
     canvas.before:
@@ -86,6 +83,16 @@
         pos_hint: {'center_x': .5, 'center_y': .5}
         fit_mode: 'contain'
         mipmap: True
+
+<DoneBtn@IconBtn>:
+    icon: 'check'
+    tint: 1, 1, 1, 1
+    canvas.before:
+        Color:
+            rgba: app.accent
+        Ellipse:
+            pos: self.center_x - dp(19), self.center_y - dp(19)
+            size: dp(38), dp(38)
 
 <PillBtn>:
     size_hint_y: None
@@ -170,20 +177,24 @@
     orientation: 'vertical'
     padding: 0, dp(8), 0, dp(6)
     spacing: dp(3)
-    canvas.before:
-        Color:
-            rgba: app.accent_soft if self.active else (0, 0, 0, 0)
-        RoundedRectangle:
-            pos: self.center_x - dp(28), self.top - dp(38)
-            size: dp(56), dp(30)
-            radius: [dp(15)]
-    Image:
-        source: ipath(root.icon)
-        color: app.accent if root.active else app.sub
+    FloatLayout:
         size_hint_y: None
-        height: dp(24)
-        fit_mode: 'contain'
-        mipmap: True
+        height: dp(30)
+        canvas.before:
+            Color:
+                rgba: app.accent_soft if root.active else (0, 0, 0, 0)
+            RoundedRectangle:
+                pos: self.center_x - dp(28), self.center_y - dp(15)
+                size: dp(56), dp(30)
+                radius: [dp(15)]
+        Image:
+            source: ipath(root.icon)
+            color: app.accent if root.active else app.sub
+            size_hint: None, None
+            size: dp(24), dp(24)
+            pos_hint: {'center_x': .5, 'center_y': .5}
+            fit_mode: 'contain'
+            mipmap: True
     Label:
         text: root.text
         font_size: '11sp'

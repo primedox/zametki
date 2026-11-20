@@ -35,27 +35,30 @@
             MoreScreen:
                 id: more
                 name: 'more'
-        NavBar:
-            NavItem:
-                icon: 'notes'
-                text: 'Заметки'
-                active: app.tab == 'notes'
-                on_release: app.open_tab('notes')
-            NavItem:
-                icon: 'calendar'
-                text: 'Календарь'
-                active: app.tab == 'calendar'
-                on_release: app.open_tab('calendar')
-            NavItem:
-                icon: 'clock'
-                text: 'Расписание'
-                active: app.tab == 'schedule'
-                on_release: app.open_tab('schedule')
-            NavItem:
-                icon: 'tune'
-                text: 'Ещё'
-                active: app.tab == 'more'
-                on_release: app.open_tab('more')
+        Clip:
+            size_hint_y: None
+            height: 0 if app.kb_open else dp(68)
+            NavBar:
+                NavItem:
+                    icon: 'notes'
+                    text: 'Заметки'
+                    active: app.tab == 'notes'
+                    on_release: app.open_tab('notes')
+                NavItem:
+                    icon: 'calendar'
+                    text: 'Календарь'
+                    active: app.tab == 'calendar'
+                    on_release: app.open_tab('calendar')
+                NavItem:
+                    icon: 'clock'
+                    text: 'Расписание'
+                    active: app.tab == 'schedule'
+                    on_release: app.open_tab('schedule')
+                NavItem:
+                    icon: 'tune'
+                    text: 'Ещё'
+                    active: app.tab == 'more'
+                    on_release: app.open_tab('more')
 
 <NotesScreen>:
     FloatLayout:
@@ -65,22 +68,15 @@
                 Title:
                     text: 'Заметки'
                 IconBtn:
-                    icon: 'search'
-                    tint: app.accent if root.searching else None
-                    on_release: root.toggle_search()
-                IconBtn:
                     icon: 'sort'
                     on_release: root.open_sort()
             BoxLayout:
                 size_hint_y: None
-                height: dp(58) if root.searching else 0
-                opacity: 1 if root.searching else 0
-                padding: dp(16), dp(2), dp(16), dp(6)
+                height: dp(64)
+                padding: dp(16), dp(6), dp(16), dp(6)
                 Field:
                     id: search
                     hint: 'Поиск по заметкам'
-                    height: dp(46) if root.searching else 0
-                    disabled: not root.searching
                     on_text: root.on_query(self.text)
             ScrollView:
                 size_hint_y: None
@@ -328,8 +324,20 @@
                     bold: True
                     font_size: '17sp'
                 Txt:
-                    text: 'Версия ' + root.version + '. Заметки, календарь и расписание уроков на неделю. Все данные хранятся на устройстве.'
+                    text: 'Версия ' + root.version + '\nЗаметки, календарь и расписание уроков на неделю. Все данные хранятся на устройстве.'
                     font_size: '14sp'
+                    color: app.sub
+                Txt:
+                    text: 'Что нового'
+                    bold: True
+                    font_size: '15sp'
+                Txt:
+                    text: root.changes
+                    font_size: '13sp'
+                    color: app.sub
+                Txt:
+                    text: app.inset_info
+                    font_size: '11sp'
                     color: app.sub
 
 <EditorScreen>:
@@ -355,6 +363,9 @@
                 halign: 'left'
                 valign: 'middle'
                 text_size: self.size
+                shorten: True
+                shorten_from: 'right'
+                max_lines: 1
                 padding: dp(6), 0
             IconBtn:
                 icon: 'pin'
@@ -363,21 +374,26 @@
             IconBtn:
                 icon: 'more'
                 on_release: root.more()
-        BoxLayout:
+            DoneBtn:
+                on_release: root.done()
+        Clip:
             size_hint_y: None
-            height: dp(46)
-            padding: dp(20), dp(4), dp(20), dp(4)
-            spacing: dp(8)
-            Chip:
-                text: root.folder_name
-                tone: root.folder_color
-                active: True
-                on_release: root.pick_folder()
-            Chip:
-                text: root.date_text
-                active: root.has_date
-                on_release: root.pick_date()
-            Widget:
+            height: 0 if app.kb_open else dp(46)
+            BoxLayout:
+                size_hint_y: None
+                height: dp(46)
+                padding: dp(20), dp(4), dp(20), dp(4)
+                spacing: dp(8)
+                Chip:
+                    text: root.folder_name
+                    tone: root.folder_color
+                    active: True
+                    on_release: root.pick_folder()
+                Chip:
+                    text: root.date_text
+                    active: root.has_date
+                    on_release: root.pick_date()
+                Widget:
         TextInput:
             id: title
             hint_text: 'Название'
@@ -411,25 +427,28 @@
             size_hint_y: 1 if root.kind == 'list' else 0
             opacity: 1 if root.kind == 'list' else 0
             disabled: root.kind != 'list'
-        BoxLayout:
+        Clip:
             size_hint_y: None
-            height: dp(60)
-            padding: dp(20), dp(8), dp(8), dp(8)
-            canvas.before:
-                Color:
-                    rgba: app.line_c
-                Rectangle:
-                    pos: self.x, self.top - dp(1)
-                    size: self.width, dp(1)
+            height: 0 if app.kb_open else dp(60)
             BoxLayout:
-                id: dots
-                size_hint_x: None
-                width: self.minimum_width
-                spacing: dp(10)
-            Widget:
-            IconBtn:
-                icon: 'font'
-                on_release: root.cycle_font()
+                size_hint_y: None
+                height: dp(60)
+                padding: dp(20), dp(8), dp(8), dp(8)
+                canvas.before:
+                    Color:
+                        rgba: app.line_c
+                    Rectangle:
+                        pos: self.x, self.top - dp(1)
+                        size: self.width, dp(1)
+                BoxLayout:
+                    id: dots
+                    size_hint_x: None
+                    width: self.minimum_width
+                    spacing: dp(10)
+                Widget:
+                IconBtn:
+                    icon: 'font'
+                    on_release: root.cycle_font()
 
 <LessonScreen>:
     BoxLayout:

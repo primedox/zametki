@@ -11,8 +11,18 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.modalview import ModalView
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.stencilview import StencilView
 
 from core.dates import MONTHS
+
+
+class Clip(StencilView, BoxLayout):
+    """A box that clips both drawing and touches to its own bounds.
+
+    Used for rows that collapse to zero height (e.g. while the keyboard is
+    open): plain zero-height boxes let their fixed-size children overflow and
+    silently swallow taps meant for neighbouring widgets.
+    """
 
 
 class Card(BoxLayout):
