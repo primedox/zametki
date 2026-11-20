@@ -257,8 +257,11 @@ class MonthGrid(BoxLayout):
     __events__ = ("on_pick",)
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
         self._cells = []
+        super().__init__(**kwargs)
+
+    def on_kv_post(self, base_widget):
+        super().on_kv_post(base_widget)
         grid = self.ids.grid
         for _ in range(42):
             cell = DayCell()
