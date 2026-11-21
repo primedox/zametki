@@ -5,7 +5,7 @@ package.domain = app.zametki
 source.dir = .
 source.include_exts = py,kv,png
 source.exclude_dirs = tests,tools,.github,bin,.buildozer,__pycache__
-version = 1.0.3
+version = 1.0.4
 requirements = python3,kivy==2.3.0
 orientation = portrait
 fullscreen = 0
@@ -17,6 +17,7 @@ presplash.filename = %(source.dir)s/assets/presplash.png
 presplash.color = #F4F6FB
 
 android.api = 33
+android.apptheme = "@android:style/Theme.Material.Light.NoActionBar"
 android.minapi = 24
 android.ndk = 25b
 p4a.branch = v2024.01.21

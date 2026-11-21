@@ -40,21 +40,30 @@ try:
     notes_app.NotesApp().run()
 except BaseException:
     _tb = traceback.format_exc()
+    _last = (_tb.strip().splitlines() or ["?"])[-1]
     try:
         from kivy.app import App
+        from kivy.core.window import Window
         from kivy.metrics import dp
         from kivy.uix.label import Label
         from kivy.uix.scrollview import ScrollView
 
         class CrashApp(App):
             def build(self):
+                try:
+                    Window.release_all_keyboards()
+                    for child in list(Window.children):
+                        Window.remove_widget(child)
+                    Window.clearcolor = (1, 1, 1, 1)
+                except Exception:
+                    pass
                 label = Label(
-                    text="ОШИБКА ЗАПУСКА:\n\n" + _tb,
+                    text="ОШИБКА: " + _last + "\n\nПодробности:\n" + _tb,
                     size_hint_y=None,
                     halign="left",
                     valign="top",
                     font_size=dp(11),
-                    color=(1, 1, 1, 1),
+                    color=(0.1, 0.1, 0.15, 1),
                 )
                 label.bind(width=lambda w, v: setattr(w, "text_size", (v - dp(16), None)))
                 label.bind(texture_size=lambda w, v: setattr(w, "height", v[1] + dp(40)))

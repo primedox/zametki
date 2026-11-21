@@ -7,7 +7,7 @@ from kivy.graphics import Color, Rectangle  # noqa: E402
 from kivy.core.clipboard import Clipboard  # noqa: E402
 from kivy.core.window import Window  # noqa: E402
 from kivy.lang import Builder  # noqa: E402
-from kivy.properties import BooleanProperty, ColorProperty, StringProperty  # noqa: E402
+from kivy.properties import BooleanProperty, ColorProperty, NumericProperty, StringProperty  # noqa: E402
 from kivy.uix.floatlayout import FloatLayout  # noqa: E402
 from kivy.utils import platform  # noqa: E402
 
@@ -23,6 +23,7 @@ if platform not in ("android", "ios"):
 class NotesApp(App):
     tab = StringProperty("notes")
     kb_open = BooleanProperty(False)
+    kb_pad = NumericProperty(0)
     inset_info = StringProperty("")
     dark = BooleanProperty(False)
     bg = ColorProperty([1, 1, 1, 1])
@@ -41,7 +42,8 @@ class NotesApp(App):
         self.title = "Заметки"
         self.icon = os.path.join(BASE, "assets", "icon.png")
         Window.clearcolor = screens.Splash.BG
-        Window.softinput_mode = "resize"
+        Window.softinput_mode = ""
+        insets.use_resize_mode()
         self.shell = FloatLayout()
         with self.shell.canvas.before:
             self._shell_color = Color(*screens.Splash.BG)
@@ -49,21 +51,33 @@ class NotesApp(App):
         self.shell.bind(pos=self._shell_sync, size=self._shell_sync)
         self.splash = screens.Splash()
         self.shell.add_widget(self.splash)
-        # let the splash animation start, then build the real UI underneath it
-        Clock.schedule_once(self._boot, 0.55)
+        # let the splash animation start, then build the real UI in small steps
+        # so frames keep being drawn (the animation never freezes) while it loads
+        self._steps = [self._boot_store, self._boot_kv_widgets, self._boot_kv_screens,
+                       self._boot_root, self._boot_finish]
+        Clock.schedule_once(self._next_step, 0.35)
         return self.shell
 
-    def _boot(self, _dt):
+    def _next_step(self, _dt):
+        step = self._steps.pop(0)
+        step()
+        if self._steps:
+            Clock.schedule_once(self._next_step, 0.03)
+
+    def _boot_store(self):
         self.store = Store(os.path.join(self.user_data_dir, "data.json"))
         self.apply_theme(self.store.prefs.get("theme", "light"))
-
-        Builder.load_file(os.path.join(BASE, "ui", "widgets.kv"))
-        Builder.load_file(os.path.join(BASE, "ui", "screens.kv"))
-
         self._dirty = False
         self._refresh = Clock.create_trigger(lambda _dt: self.refresh_all())
         self.store.subscribe(self._store_changed)
 
+    def _boot_kv_widgets(self):
+        Builder.load_file(os.path.join(BASE, "ui", "widgets.kv"))
+
+    def _boot_kv_screens(self):
+        Builder.load_file(os.path.join(BASE, "ui", "screens.kv"))
+
+    def _boot_root(self):
         root = screens.Root()
         self.ui = root
         self.sm = root.ids.sm
@@ -76,22 +90,46 @@ class NotesApp(App):
         self.schedule_screen = main.ids.schedule
         self.more_screen = main.ids.more
 
-        self._max_height = Window.height
-        self._kb_trigger = Clock.create_trigger(self._apply_keyboard, 0.12)
-        Window.bind(on_keyboard=self._on_key, height=self._on_height)
-
         # keep clear of the status bar / camera cut-out if the surface is drawn under them
         self._pad_top, self._pad_bottom, note = ((0, 0, "desktop") if platform != "android"
                                                  else insets.measure())
         self.inset_info = "Отступы: %d/%d px  ·  %s" % (self._pad_top, self._pad_bottom, note)
         root.size_hint = (1, None)
         self.shell.add_widget(root, index=1)  # under the splash
+        self._max_height = Window.height
         Window.bind(height=self._place_root)
-        self.bind(kb_open=self._place_root, bg=self._tint_shell)
+        self.bind(kb_open=self._place_root, kb_pad=self._place_root, bg=self._tint_shell)
         self._tint_shell()
         self._place_root()
+
+    def _boot_finish(self):
+        Window.bind(on_keyboard=self._on_key, height=self._on_height)
+        Clock.schedule_interval(self._poll_keyboard, 0.15)
         self.booted = True
-        Clock.schedule_once(self.splash.finish, 0.1)
+        self.splash.finish()
+
+    # ---- keyboard -------------------------------------------------------
+    def _read_keyboard(self):
+        """(open?, pixels of the surface still covered by the keyboard)."""
+        shrunk = Window.height < self._max_height * 0.8
+        if platform != "android":
+            return shrunk, 0
+        visible, overlap = insets.keyboard_state()
+        return shrunk or visible, overlap
+
+    def _poll_keyboard(self, _dt):
+        is_open, overlap = self._read_keyboard()
+        if overlap != self.kb_pad:
+            self.kb_pad = overlap
+        if is_open != self.kb_open:
+            self.kb_open = is_open
+
+    def _on_height(self, _window, height):
+        self._max_height = max(self._max_height, height)
+
+    def on_start(self):
+        if self.booted:
+            self.style_bars()
 
     # ---- layout ---------------------------------------------------------
     def _shell_sync(self, *_):
@@ -102,25 +140,11 @@ class NotesApp(App):
         self._shell_color.rgba = self.bg
 
     def _place_root(self, *_):
-        bottom = 0 if self.kb_open else self._pad_bottom
+        bottom = self.kb_pad if self.kb_open else self._pad_bottom
         self.ui.x = 0
         self.ui.y = bottom
         self.ui.width = Window.width
         self.ui.height = max(Window.height - self._pad_top - bottom, 100)
-
-    # ---- keyboard -------------------------------------------------------
-    def _on_height(self, _window, height):
-        # the window shrinks when the soft keyboard opens; debounce the animation
-        self._max_height = max(self._max_height, height)
-        self._kb_trigger.cancel()
-        self._kb_trigger()
-
-    def _apply_keyboard(self, _dt):
-        self.kb_open = Window.height < self._max_height * 0.8
-
-    def on_start(self):
-        if self.booted:
-            self.style_bars()
 
     def on_pause(self):
         if self.booted:
