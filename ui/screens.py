@@ -59,18 +59,30 @@ class Splash(FloatLayout):
         self.add_widget(self.name)
         self.add_widget(self.ver)
         self._fading = False
-        Animation(size=(dp(96), dp(96)), duration=.55, t="out_cubic").start(self.logo)
+        grow = Animation(size=(dp(96), dp(96)), duration=.55, t="out_cubic")
+        grow.bind(on_complete=self._breathe)
+        grow.start(self.logo)
         (Animation(duration=.25) + Animation(opacity=1, duration=.35)).start(self.name)
 
     def _sync(self, *_):
         self._rect.pos = self.pos
         self._rect.size = self.size
 
+    def _breathe(self, *_):
+        """Gentle pulse so the logo keeps moving while the app finishes loading."""
+        if self._fading:
+            return
+        pulse = (Animation(size=(dp(88), dp(88)), duration=.6, t="in_out_sine")
+                 + Animation(size=(dp(96), dp(96)), duration=.6, t="in_out_sine"))
+        pulse.repeat = True
+        pulse.start(self.logo)
+
     def finish(self, *_):
         """Fade away once the real UI is ready underneath."""
         if self._fading:
             return
         self._fading = True
+        Animation.cancel_all(self.logo)
         anim = Animation(opacity=0, duration=.3)
         anim.bind(on_complete=lambda *_: self.parent and self.parent.remove_widget(self))
         anim.start(self)
@@ -131,7 +143,9 @@ class NotesScreen(Screen):
         Window.release_all_keyboards()
         return True
 
-    def on_query(self, text):
+    def search_changed(self, text):
+        # NB: must not be called on_query - Kivy would treat it as the
+        # automatic handler of the `query` property (2 arguments) and crash.
         self.query = text
         self._query_trigger.cancel()
         self._query_trigger()

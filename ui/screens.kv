@@ -77,7 +77,7 @@
                 Field:
                     id: search
                     hint: 'Поиск по заметкам'
-                    on_text: root.on_query(self.text)
+                    on_text: root.search_changed(self.text)
             ScrollView:
                 size_hint_y: None
                 height: dp(46)
